@@ -1,0 +1,9 @@
+{
+  "id": "tag-registry-client",
+  "name": "Tag Registry Client",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Subscribe to a shared tag-registry repo and import its core and team tags into your vault as notes.",
+  "author": "David Staulcup",
+  "isDesktopOnly": true
+}

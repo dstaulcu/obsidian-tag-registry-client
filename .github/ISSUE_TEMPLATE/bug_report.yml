@@ -1,0 +1,59 @@
+name: Bug report
+description: Something is not working
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        In Obsidian, open **Settings → Tag Registry Client → Report an issue** and use **Copy** to get the diagnostics block below. It contains versions and counts only: no tokens, repo URLs, team names, folders or note content.
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Plugin version
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS and Obsidian version
+      placeholder: win32 x64, Obsidian 1.8.0
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: Include any message shown in Obsidian.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Which access method (https, git, token), startup mode, and what you did.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Paste the copied diagnostics.
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I removed anything private (repo URLs, note names, content) from this report.
+          required: true
