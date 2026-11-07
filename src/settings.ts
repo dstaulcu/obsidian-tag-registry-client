@@ -32,6 +32,8 @@ export interface RegistrySettings {
   knownTeams: ManifestTeam[]
   destFolder: string
   startupMode: StartupMode
+  /** Verbose, leak-safe progress lines in the developer console. */
+  debugLogging: boolean
 }
 
 const METHODS: string[] = ['https', 'git', 'token']
@@ -42,7 +44,7 @@ export function newSource(): SourceSetting {
 }
 
 export function defaultSettings(): RegistrySettings {
-  return { schemaVersion: 1, sources: [newSource()], teams: [], allTeams: false, includeAncestors: true, showExampleTeams: false, knownTeams: [], destFolder: DEFAULT_DEST_FOLDER, startupMode: 'notify' }
+  return { schemaVersion: 1, sources: [newSource()], teams: [], allTeams: false, includeAncestors: true, showExampleTeams: false, knownTeams: [], destFolder: DEFAULT_DEST_FOLDER, startupMode: 'notify', debugLogging: false }
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
@@ -88,5 +90,6 @@ export function normalizeSettings(raw: unknown): RegistrySettings {
     knownTeams: normalizeTeams(raw.knownTeams),
     destFolder: typeof raw.destFolder === 'string' ? raw.destFolder : d.destFolder,
     startupMode: MODES.includes(raw.startupMode as string) ? (raw.startupMode as StartupMode) : d.startupMode,
+    debugLogging: raw.debugLogging === true,
   }
 }

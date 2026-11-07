@@ -1,9 +1,9 @@
 import { App, Notice } from 'obsidian'
-import { LOG_TAG } from '../brand'
 import { fetchTeams, ImportEnv, ImportMode, runImport } from '../core/importer'
 import { createSource } from '../core/sources'
 import { RegistrySettings } from '../settings'
 import { PreviewModal } from '../ui/PreviewModal'
+import { makeLogger } from './logger'
 import { nodeDeps } from './nodeDeps'
 import { getToken } from './secrets'
 import { renameUsages, usages, vaultAdapter } from './vaultAdapter'
@@ -27,7 +27,7 @@ function envFor(host: Host): ImportEnv {
       new PreviewModal(host.app, plan, async (tag) => (await usages(host.app, host.settings.destFolder, tag)).length).openAndWait(),
     countUsages: async (dest, tag) => (await usages(host.app, dest, tag)).length,
     renameUsages: (dest, from, to) => renameUsages(host.app, dest, from, to),
-    warn: (m, e) => console.warn(`[${LOG_TAG}] ${m}`, ...(e === undefined ? [] : [e])),
+    log: makeLogger(host.settings),
   }
 }
 

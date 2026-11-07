@@ -26,6 +26,7 @@ describe('diagnostics (R-FND-5)', () => {
     expect(out).toContain('Selected teams: 2')
     expect(out).toContain('Startup mode: auto')
     expect(out).toContain('Secret storage available: yes')
+    expect(out).toContain('Debug logging: no')
   })
 
   it('leaks no sentinel from any sensitive field', () => {

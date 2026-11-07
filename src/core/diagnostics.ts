@@ -13,6 +13,7 @@ export interface DiagnosticsSnapshot {
   teams: string
   startupMode: string
   secretStorage: boolean
+  debugLogging: boolean
 }
 
 /** Reduce settings to the allowed scalars. URLs, tokens, team names and the destination never pass through. */
@@ -27,6 +28,7 @@ export function snapshotFromSettings(
     methods: [...new Set(configured.map((x) => x.authMethod))].join(', ') || 'none',
     teams: s.allTeams ? 'all' : String(s.teams.length),
     startupMode: s.startupMode,
+    debugLogging: s.debugLogging,
   }
 }
 
@@ -46,6 +48,7 @@ export function buildReport(s: DiagnosticsSnapshot): string {
       `- Selected teams: ${s.teams}`,
       `- Startup mode: ${s.startupMode}`,
       `- Secret storage available: ${yn(s.secretStorage)}`,
+      `- Debug logging: ${yn(s.debugLogging)}`,
     ].join('\n') + '\n'
   )
 }

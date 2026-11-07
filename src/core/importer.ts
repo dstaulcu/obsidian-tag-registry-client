@@ -1,5 +1,6 @@
 import type { RegistrySettings, SourceSetting } from '../settings'
 import { applyImport, Decision, RegistryVault } from './apply'
+import { Logger } from './log'
 import { destError, normalizeDest } from './destination'
 import { filterTeams, Manifest, mergeManifests, parseManifest } from './manifest'
 import { findOrphans, ImportPlan, orphanSuffix, planImport, summarize } from './plan'
@@ -35,7 +36,7 @@ export interface ImportEnv {
   /** Notes outside `dest` using `#tag`, and the opt-in rewrite. */
   countUsages(dest: string, tag: string): Promise<number>
   renameUsages(dest: string, from: string, to: string): Promise<number>
-  warn(message: string, error?: unknown): void
+  log: Logger
 }
 
 export interface Loaded {
@@ -44,16 +45,22 @@ export interface Loaded {
 }
 
 /** Fetch every configured source's manifest. One failure rejects with a message naming the repo (never credentials or tokens). */
-export async function loadRegistries(env: Pick<ImportEnv, 'settings' | 'getToken' | 'makeSource'>): Promise<Loaded> {
+export async function loadRegistries(env: Pick<ImportEnv, 'settings' | 'getToken' | 'makeSource' | 'log'>): Promise<Loaded> {
   const out: Loaded = { sources: [], manifests: [] }
   for (const s of env.settings.sources.filter((x) => x.repoUrl.trim())) {
     const cfg: SourceConfig = { repoUrl: s.repoUrl.trim(), ref: s.ref.trim() || 'main', method: s.authMethod, token: env.getToken(s) }
+    const repo = publicRepoUrl(cfg.repoUrl)
+    const t0 = Date.now()
+    env.log.debug('fetching manifest', { repo, ref: cfg.ref, method: cfg.method, hasToken: !!cfg.token })
     const src = env.makeSource(cfg)
     try {
-      out.manifests.push(parseManifest(await src.fetchManifest()))
+      const m = parseManifest(await src.fetchManifest())
+      out.manifests.push(m)
+      env.log.debug('manifest loaded', { repo, tags: m.tags.length, teams: m.teams.length, ms: Date.now() - t0 })
     } catch (e) {
       const inner = e instanceof RegistryError ? e.detail : (e as Error).message
-      throw new RegistryError(cfg.method, `${publicRepoUrl(cfg.repoUrl)}: ${inner}`)
+      env.log.debug('manifest failed', { repo, method: cfg.method, ms: Date.now() - t0 })
+      throw new RegistryError(cfg.method, `${repo}: ${inner}`)
     }
     out.sources.push(src)
   }
@@ -68,13 +75,14 @@ export async function rememberTeams(env: Pick<ImportEnv, 'settings' | 'saveSetti
 }
 
 /** "Fetch teams": returns an error message, or null on success. Settings are untouched on failure. */
-export async function fetchTeams(env: Pick<ImportEnv, 'settings' | 'saveSettings' | 'getToken' | 'makeSource'>): Promise<string | null> {
+export async function fetchTeams(env: Pick<ImportEnv, 'settings' | 'saveSettings' | 'getToken' | 'makeSource' | 'log'>): Promise<string | null> {
   if (!env.settings.sources.some((s) => s.repoUrl.trim())) return 'Set a registry URL first'
   try {
     const { manifests } = await loadRegistries(env)
     await rememberTeams(env, mergeManifests(manifests).teams)
     return null
   } catch (e) {
+    env.log.debug('fetch teams failed')
     return (e as Error).message
   }
 }
@@ -95,21 +103,29 @@ export async function runImport(env: ImportEnv, opts: { mode: ImportMode }): Pro
   const { mode } = opts
   const interactive = mode === 'interactive'
   const s = env.settings
-  if (running) return
+  const log = env.log
+  if (running) {
+    log.debug('import skipped: already running', { mode })
+    return
+  }
   if (!s.sources.some((x) => x.repoUrl.trim())) {
+    log.debug('import skipped: no registry URL', { mode })
     if (interactive) env.notice('Tags: set a registry URL in the plugin settings first')
     return
   }
   const bad = destError(s.destFolder)
   if (bad) {
+    log.debug('import skipped: destination rejected', { mode })
     if (interactive) env.notice(`Tags: ${bad}`)
     return
   }
   running = true
+  const t0 = Date.now()
+  log.debug('import started', { mode, sources: s.sources.filter((x) => x.repoUrl.trim()).length, allTeams: s.allTeams, teams: s.teams.length })
   try {
     const { sources, manifests } = await loadRegistries(env)
     const merged = mergeManifests(manifests)
-    for (const w of merged.warnings) env.warn(w)
+    for (const w of merged.warnings) log.warn(w)
     await rememberTeams(env, merged.teams)
 
     const keep = new Set(filterTeams(merged, s.teams, s.allTeams, { includeAncestors: s.includeAncestors, showExamples: s.showExampleTeams }).map((t) => t.path))
@@ -118,9 +134,23 @@ export async function runImport(env: ImportEnv, opts: { mode: ImportMode }): Pro
     const plan = await planImport(picked, dest, (p) => env.vault.read(p))
     const orphans = findOrphans(plan.items.map((i) => i.vaultPath), await env.vault.listStamped(dest)).length
     const pending = plan.counts.new + plan.counts.updated + plan.counts.conflict
-    const fetchNote = (item: { origin: number; entry: { path: string } }) => sources[item.origin].fetchNote(item.entry.path)
+    log.debug('plan ready', { selected: picked.tags.length, ...plan.counts, orphans, ms: Date.now() - t0 })
+    let fetchedNotes = 0
+    let fetchMs = 0
+    const fetchNote = async (item: { origin: number; entry: { path: string } }) => {
+      const t = Date.now()
+      try {
+        return await sources[item.origin].fetchNote(item.entry.path)
+      } finally {
+        fetchedNotes++
+        fetchMs += Date.now() - t
+      }
+    }
+    const applied = (r: { created: number; updated: number }) =>
+      log.debug('apply done', { fetched: fetchedNotes, fetchMs, created: r.created, updated: r.updated, ms: Date.now() - t0 })
 
     if (mode === 'notify') {
+      log.debug('notify only; nothing written', { pending, ms: Date.now() - t0 })
       if (pending) env.notice(`${summarize(plan.counts)}${orphanSuffix(orphans)}. Run "Import / update tags" to review.`, 8000)
       return
     }
@@ -128,6 +158,7 @@ export async function runImport(env: ImportEnv, opts: { mode: ImportMode }): Pro
     if (mode === 'auto') {
       const decisions: Decision[] = plan.items.filter((i) => i.category === 'new' || i.category === 'updated').map((item) => ({ item }))
       const r = await applyImport(decisions, fetchNote, env.vault)
+      applied(r)
       const wrote = counts([[r.created, 'new'], [r.updated, 'updated']])
       const c = plan.counts.conflict
       const review = c ? `${c} conflict${c > 1 ? 's need' : ' needs'} review` : ''
@@ -141,8 +172,12 @@ export async function runImport(env: ImportEnv, opts: { mode: ImportMode }): Pro
       return
     }
     const choice = await env.preview(plan)
-    if (!choice) return
+    if (!choice) {
+      log.debug('preview cancelled; nothing written', { ms: Date.now() - t0 })
+      return
+    }
     const r = await applyImport(choice.decisions, fetchNote, env.vault)
+    applied(r)
     const kept = choice.decisions.filter((d) => d.item.category === 'conflict' && (d.choice ?? 'keep') === 'keep').length
     let msg = counts([[r.created, 'new'], [r.updated, 'updated'], [r.copies.length, 'saved as copy'], [kept, 'kept as yours']])
     msg = msg ? `Tags: ${msg}` : 'Tags: nothing written'
@@ -152,11 +187,12 @@ export async function runImport(env: ImportEnv, opts: { mode: ImportMode }): Pro
     }
     env.notice(msg + orphanSuffix(orphans), 8000)
   } catch (e) {
+    log.debug('import aborted', { mode, ms: Date.now() - t0 })
     if (interactive) {
-      env.warn('import failed', e)
+      log.error('import failed', e)
       env.notice(failureMessage(e), 10000)
     } else {
-      env.warn(`${mode} import failed: ${(e as Error).message}`)
+      log.warn(`${mode} import failed: ${(e as Error).message}`)
     }
   } finally {
     running = false

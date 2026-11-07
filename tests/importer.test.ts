@@ -1,6 +1,7 @@
 import { ImportEnv, ImportVault, PreviewResult, fetchTeams, runImport } from '../src/core/importer'
 import { RegistryError, RegistrySource } from '../src/core/sources'
 import { sha256, stamp } from '../src/core/stamp'
+import { createLogger, LogLevel } from '../src/core/log'
 import { normalizeSettings } from '../src/settings'
 import { FakeVault, entry, mf, note, team } from './helpers'
 
@@ -25,6 +26,7 @@ function setup(over: { settings?: unknown; source?: Partial<RegistrySource>; pre
   const vault = new StampVault()
   const notices: string[] = []
   const warns: string[] = []
+  const lines: string[] = []
   const fetched: string[] = []
   const saves = { n: 0 }
   const source: RegistrySource = {
@@ -44,9 +46,15 @@ function setup(over: { settings?: unknown; source?: Partial<RegistrySource>; pre
       over.preview !== undefined ? over.preview : { decisions: plan.items.filter((i) => i.category !== 'conflict').map((item) => ({ item })), renames: [] },
     countUsages: async () => 0,
     renameUsages: async () => 3,
-    warn: (m) => void warns.push(m),
+    log: createLogger(
+      (level: LogLevel, m, d) => {
+        lines.push(`${level}: ${m} ${JSON.stringify(d ?? {})}`)
+        if (level === 'warn' || level === 'error') warns.push(m)
+      },
+      () => settings.debugLogging,
+    ),
   }
-  return { env, settings, vault, notices, warns, fetched, saves }
+  return { env, settings, vault, notices, warns, lines, fetched, saves }
 }
 
 describe('runImport: configuration guards (R-IMP-1.2, 1.3)', () => {
@@ -258,5 +266,38 @@ describe('fetchTeams (R-SUB-5)', () => {
   })
   it('asks for a URL when none is set', async () => {
     expect(await fetchTeams(setup({ settings: { sources: [{ repoUrl: '' }] } }).env)).toMatch(/registry URL/)
+  })
+})
+
+describe('runImport: debug logging', () => {
+  const secrets = { sources: [{ id: 's1', repoUrl: 'https://alice:SENTINEL_CRED@github.com/o/r', authMethod: 'token', token: 'SENTINEL_TOKEN' }], destFolder: 'SENTINEL_FOLDER' }
+
+  it('is silent when disabled, apart from warnings', async () => {
+    const t = setup({ settings: { debugLogging: false } })
+    await runImport(t.env, { mode: 'notify' })
+    expect(t.lines).toEqual([])
+  })
+  it('logs phases and counts when enabled', async () => {
+    const t = setup({ settings: { debugLogging: true } })
+    await runImport(t.env, { mode: 'notify' })
+    const all = t.lines.join('\n')
+    expect(all).toMatch(/import started/)
+    expect(all).toMatch(/manifest loaded .*"tags":3/)
+    expect(all).toMatch(/plan ready .*"new":/)
+  })
+  it('logs fetch and apply timing in auto mode', async () => {
+    const t = setup({ settings: { debugLogging: true } })
+    await runImport(t.env, { mode: 'auto' })
+    expect(t.lines.join('\n')).toMatch(/apply done .*"fetched":2/)
+  })
+  it('never logs tokens, credentialed URLs, destination or note text', async () => {
+    const ok = setup({ settings: { ...secrets, debugLogging: true } })
+    await runImport(ok.env, { mode: 'auto' })
+    const bad = setup({ settings: { ...secrets, debugLogging: true }, source: { fetchManifest: async () => { throw new RegistryError('token', 'boom') } } })
+    await runImport(bad.env, { mode: 'interactive' })
+    const all = [...ok.lines, ...bad.lines].join('\n')
+    expect(all).not.toMatch(/SENTINEL|alice|token":"/i)
+    expect(all).not.toContain(gitNote)
+    expect(all).toContain('https://github.com/o/r')
   })
 })

@@ -61,6 +61,10 @@ Startup failures go to the developer console and never raise an error popup.
 - Tokens are sent only as request headers and never appear in notices, logs or the diagnostics report.
 - The git cache lives in your system temp folder, outside the vault.
 
+## Debugging
+
+Turn on **Debug logging** in the plugin settings, then open the developer console (Ctrl+Shift+I) and filter for `tag-registry-client`. You'll see each import phase with counts and timings. Logs never include tokens, repo credentials, folders, note content or vault paths. Warnings and errors are always logged, with or without the setting.
+
 ## Reporting a bug
 
 **Settings → Tag Registry Client → Report an issue** copies a diagnostics block (versions, platform, counts of sources and teams, access methods, startup mode, whether secret storage exists) and opens the bug form. It never includes tokens, repo URLs, team names, folders, note content or vault paths.

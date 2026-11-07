@@ -276,6 +276,15 @@ export class RegistrySettingTab extends PluginSettingTab {
         }),
       )
     new Setting(el)
+      .setName('Debug logging')
+      .setDesc('Writes progress and timing lines to the developer console (Ctrl+Shift+I). Never includes tokens, repo URLs, folders, note content or vault paths.')
+      .addToggle((t) =>
+        t.setValue(p.settings.debugLogging).onChange(async (v) => {
+          p.settings.debugLogging = v
+          await this.save()
+        }),
+      )
+    new Setting(el)
       .setName('Diagnostics')
       .setDesc('Versions and counts to paste into a bug report. It never includes tokens, repo URLs, team names, folders, note content or vault paths.')
       .addButton((b) =>

@@ -40,7 +40,7 @@ describe('normalizeSettings (R-SUB-9, R-FND-4)', () => {
 
   it('ignores keys from other plugins and the old format (R-FND-4.2)', () => {
     const s = normalizeSettings({ jobs: [1], tagReview: {}, executor: 'x', glossary: { repoUrl: 'https://github.com/o/r' }, checkOnStartup: true, destFolder: 'G', schemaVersion: 2 })
-    expect(Object.keys(s).sort()).toEqual(['allTeams', 'destFolder', 'includeAncestors', 'knownTeams', 'schemaVersion', 'showExampleTeams', 'sources', 'startupMode', 'teams'])
+    expect(Object.keys(s).sort()).toEqual(['allTeams', 'debugLogging', 'destFolder', 'includeAncestors', 'knownTeams', 'schemaVersion', 'showExampleTeams', 'sources', 'startupMode', 'teams'])
     expect(s.destFolder).toBe('G')
     expect(s.schemaVersion).toBe(1)
     expect(s.sources[0].repoUrl).toBe('')
@@ -81,4 +81,12 @@ describe('secrets (R-SUB-4)', () => {
     }
   })
   it('secret id format', () => expect(secretId({ id: 'x' })).toBe('tag-registry-client-token-x'))
+})
+
+describe('debugLogging', () => {
+  it('defaults to false and only accepts a real boolean', () => {
+    expect(normalizeSettings(null).debugLogging).toBe(false)
+    expect(normalizeSettings({ debugLogging: 'yes' }).debugLogging).toBe(false)
+    expect(normalizeSettings({ debugLogging: true }).debugLogging).toBe(true)
+  })
 })
