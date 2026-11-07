@@ -1,7 +1,7 @@
 name: Release
 
 # Pushing a version tag (for example 0.1.0) builds the plugin and publishes a GitHub release
-# with the three files Obsidian installs: main.js, manifest.json, styles.css.
+# with the three files Obsidian installs (main.js, manifest.json, styles.css) plus SHA256SUMS.
 # Obsidian expects the tag to equal the manifest version exactly, with no "v" prefix.
 on:
   push:
@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history and tags, to list changes since the previous release
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -34,9 +36,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cat > install-note.md <<'NOTE'
+          sha256sum main.js manifest.json styles.css > SHA256SUMS
+          prev=$(git describe --tags --abbrev=0 --match '[0-9]*.[0-9]*.[0-9]*' "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          range=${prev:+$prev..}$GITHUB_REF_NAME
+          cat > release-notes.md <<'NOTE'
           ## Install
 
-          Download `main.js`, `manifest.json` and `styles.css` below and put them in `<your vault>/.obsidian/plugins/tag-registry-client/`. Restart Obsidian and enable **Tag Registry Client** under Settings → Community plugins. The "Source code" archives GitHub adds are not needed. Desktop only; git is needed only for the "Local git" access method.
+          Download `main.js`, `manifest.json` and `styles.css` below and put them in `<your vault>/.obsidian/plugins/tag-registry-client/`. Restart Obsidian and enable **Tag Registry Client** under Settings → Community plugins. The "Source code" archives GitHub adds are not needed. Desktop only; git is needed only for the "Local git" access method. `SHA256SUMS` lets you verify the three files (`sha256sum -c SHA256SUMS`).
+
+          ## Changes
+
           NOTE
-          gh release create "$GITHUB_REF_NAME" main.js manifest.json styles.css --title "$GITHUB_REF_NAME" --notes-file install-note.md --generate-notes
+          changes=$(git log "$range" --no-merges --pretty='- %s' | grep -vE '^- Release [0-9]+\.[0-9]+\.[0-9]+' || true)
+          echo "${changes:-- Maintenance release}" >> release-notes.md
+          if [ -n "$prev" ]; then
+            echo >> release-notes.md
+            echo "**Full changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$prev...$GITHUB_REF_NAME" >> release-notes.md
+          fi
+          gh release create "$GITHUB_REF_NAME" main.js manifest.json styles.css SHA256SUMS --title "$GITHUB_REF_NAME" --notes-file release-notes.md
