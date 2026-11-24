@@ -1,12 +1,14 @@
 import { App, Notice } from 'obsidian'
 import { fetchTeams, ImportEnv, ImportMode, runImport } from '../core/importer'
 import { createSource } from '../core/sources'
+import { runCreateTagPages } from '../core/tagPages'
 import { RegistrySettings } from '../settings'
 import { PreviewModal } from '../ui/PreviewModal'
+import { TagPageModal } from '../ui/TagPageModal'
 import { makeLogger } from './logger'
 import { nodeDeps } from './nodeDeps'
 import { getToken } from './secrets'
-import { renameUsages, usages, vaultAdapter } from './vaultAdapter'
+import { renameUsages, scanTags, usages, vaultAdapter } from './vaultAdapter'
 
 /** What import and settings code may touch. The plugin object itself is never passed down. */
 export interface Host {
@@ -37,4 +39,19 @@ export function importRegistry(host: Host, opts: { mode: ImportMode }): Promise<
 
 export function fetchRegistryTeams(host: Host): Promise<string | null> {
   return fetchTeams(envFor(host))
+}
+
+/** "Create missing tag pages" (R-TP-*): same registries and vault adapter as the import, its own confirm modal. */
+export function createTagPages(host: Host): Promise<void> {
+  const env = envFor(host)
+  return runCreateTagPages({
+    settings: host.settings,
+    getToken: env.getToken,
+    makeSource: env.makeSource,
+    scan: (exclude) => scanTags(host.app, exclude),
+    vault: env.vault,
+    confirm: (plan) => new TagPageModal(host.app, plan, host.settings.tagPageFolder).openAndWait(),
+    notice: env.notice,
+    log: env.log,
+  })
 }

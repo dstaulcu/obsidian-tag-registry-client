@@ -22,12 +22,13 @@ The product specs are in `.kiro/`: `.kiro/README.md` (spec index, manifest v2 co
 - `core/importer.ts` holds the whole import flow (`runImport`, `fetchTeams`) against an injected `ImportEnv`, so interactive/notify/auto behaviour is unit-tested with fakes (`tests/importer.test.ts`). `host/controller.ts` only builds the real `ImportEnv` from a `Host` `{app, settings, saveSettings}`; the plugin object is never passed down.
 - `src/host/` adapters: `nodeDeps` (requestUrl / execFile / fs), `vaultAdapter`, `secrets` (takes an app-like `{secretStorage?}`, not the plugin). `src/ui/` has `SettingTab` and `PreviewModal` (`openAndWait()` resolves to the choices or null). `src/main.ts` is wiring only. `src/brand.ts` centralizes id/name/log tag/repo/default folder.
 - Logging: `core/log.ts` is a pure `Logger` (`warn`/`error` always, `debug`/`info` only while the `debugLogging` setting is on) injected as `ImportEnv.log`; `host/logger.ts` is the console sink. Log scalars/counts only and name repos via `publicRepoUrl` (Invariant 5); `tests/importer.test.ts` has a sentinel test.
+- Tag pages (`.kiro/specs/tag-pages`): `core/tagPages.ts` plans and creates local tag pages (`aliases: ["#tag"]`) under `tagPageFolder` for tags the vault uses that no registry defines, via `runCreateTagPages(TagPageEnv)`; `host/vaultAdapter.ts` `scanTags` reads the metadata cache; `ui/TagPageModal.ts` confirms. It never overwrites a note and never stubs a registry tag. Grooming is design-only (`.kiro/specs/tag-grooming/design.md`).
 - `settings.ts` `normalizeSettings` is total and drops unknown keys; there is no migration from Scheduled Agents.
 
 ## Invariants (do not violate)
 
-1. No vault writes before the user confirms the preview — except opt-in startup `auto`, which writes only new/updated notes (never conflicts or renames).
-2. Every manifest note path passes `isSafeNotePath`; hidden folders are never written; the destination passes `destError`.
+1. No vault writes before the user confirms the preview (or the tag page list) — except opt-in startup `auto`, which writes only new/updated notes (never conflicts or renames).
+2. Every manifest note path passes `isSafeNotePath`; hidden folders are never written; the destination passes `destError` and the tag page folder passes `tagPageFolderError`.
 3. Downloaded note text must match its manifest sha256 before it is stamped/written.
 4. Fetch and validate all sources before any write; one failure aborts the whole run ("No notes were changed").
 5. Diagnostics, notices and logs never contain tokens, credentialed URLs, note content or vault paths. Use `publicRepoUrl` when naming a repo.

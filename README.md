@@ -54,6 +54,14 @@ If a tag disappears upstream or you unsubscribe from a team, its note stays in y
 
 Startup failures go to the developer console and never raise an error popup.
 
+## Tag pages
+
+A tag page is a note with the tag as an alias (`aliases: ["#project/x"]`), so clicking the tag in Tag Wrangler opens it. Every imported registry note is already a tag page. For tags you use that no registry defines, run **Create missing tag pages** from the command palette or the settings tab. It lists the pages it would add, with how many notes use each tag, and writes nothing until you press **Create**.
+
+- Pages go in the **Tag page folder** (default `Tags/_local`) at `<folder>/<facet>/<name>.md`, in the registry's note format with an empty `Definition:` line for you to fill in. That makes a local tag easy to propose to the registry later.
+- A tag that already has a page anywhere in the vault, or that any configured registry defines, is skipped. So are tags that don't fit `<facet>/<name>` in lowercase kebab case; the notice counts them.
+- Existing notes are never changed or overwritten.
+
 ## Privacy
 
 - The plugin fetches only from the registries you configure, and only the manifest and the notes you subscribe to.

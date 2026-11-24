@@ -7,3 +7,5 @@ export const LOG_TAG = 'tag-registry-client'
 export const REPO_URL = 'https://github.com/dstaulcu/obsidian-tag-registry-client'
 /** Vault folder imported notes land in unless the user picks another. */
 export const DEFAULT_DEST_FOLDER = 'Tags'
+/** Vault folder for local tag pages (tags you use that no registry defines). `_local` can never be a team id. */
+export const DEFAULT_TAG_PAGE_FOLDER = 'Tags/_local'

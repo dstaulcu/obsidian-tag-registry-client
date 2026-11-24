@@ -40,7 +40,7 @@ describe('normalizeSettings (R-SUB-9, R-FND-4)', () => {
 
   it('ignores keys from other plugins and the old format (R-FND-4.2)', () => {
     const s = normalizeSettings({ jobs: [1], tagReview: {}, executor: 'x', glossary: { repoUrl: 'https://github.com/o/r' }, checkOnStartup: true, destFolder: 'G', schemaVersion: 2 })
-    expect(Object.keys(s).sort()).toEqual(['allTeams', 'debugLogging', 'destFolder', 'includeAncestors', 'knownTeams', 'schemaVersion', 'showExampleTeams', 'sources', 'startupMode', 'teams'])
+    expect(Object.keys(s).sort()).toEqual(['allTeams', 'debugLogging', 'destFolder', 'includeAncestors', 'knownTeams', 'schemaVersion', 'showExampleTeams', 'sources', 'startupMode', 'tagPageFolder', 'teams'])
     expect(s.destFolder).toBe('G')
     expect(s.schemaVersion).toBe(1)
     expect(s.sources[0].repoUrl).toBe('')
@@ -81,6 +81,14 @@ describe('secrets (R-SUB-4)', () => {
     }
   })
   it('secret id format', () => expect(secretId({ id: 'x' })).toBe('tag-registry-client-token-x'))
+})
+
+describe('tagPageFolder (R-TP-1.1)', () => {
+  it('defaults to Tags/_local and keeps a string', () => {
+    expect(normalizeSettings(null).tagPageFolder).toBe('Tags/_local')
+    expect(normalizeSettings({ tagPageFolder: 7 }).tagPageFolder).toBe('Tags/_local')
+    expect(normalizeSettings({ tagPageFolder: 'Pages/Tags' }).tagPageFolder).toBe('Pages/Tags')
+  })
 })
 
 describe('debugLogging', () => {

@@ -3,7 +3,8 @@ import { REPO_URL } from '../brand'
 import { buildReport, snapshotFromSettings } from '../core/diagnostics'
 import { destError } from '../core/destination'
 import { gitAvailable, parseRepoUrl, REPO_URL_HINT } from '../core/sources'
-import { fetchRegistryTeams, importRegistry } from '../host/controller'
+import { tagPageFolderError } from '../core/tagPages'
+import { createTagPages, fetchRegistryTeams, importRegistry } from '../host/controller'
 import { nodeDeps } from '../host/nodeDeps'
 import { clearToken, getToken, hasSecretStorage, setToken } from '../host/secrets'
 import type TagRegistryPlugin from '../main'
@@ -21,6 +22,7 @@ export class RegistrySettingTab extends PluginSettingTab {
     this.renderTeams(containerEl)
     this.renderDestination(containerEl)
     this.renderWhen(containerEl)
+    this.renderTagPages(containerEl)
     this.renderReport(containerEl)
   }
 
@@ -260,6 +262,33 @@ export class RegistrySettingTab extends PluginSettingTab {
           this.display()
         }),
       )
+  }
+
+  private renderTagPages(el: HTMLElement) {
+    const p = this.plugin
+    const s = p.settings
+    new Setting(el).setName('Tag pages').setHeading()
+    el.createEl('p', {
+      cls: 'setting-item-description',
+      text: 'A tag page is a note with the tag as an alias. Registry tags get theirs from the import. This creates pages for tags you use that no registry defines, and never touches a tag that already has a page.',
+    })
+    const msg = el.createEl('div', { cls: 'setting-item-description trs-invalid' })
+    const validate = () => msg.setText(tagPageFolderError(s.tagPageFolder, s.destFolder) ?? '')
+    new Setting(el)
+      .setName('Tag page folder')
+      .setDesc('Vault folder for local tag pages: <folder>/<facet>/<name>.md. Not the destination folder itself.')
+      .addText((t) =>
+        t.setValue(s.tagPageFolder).onChange(async (v) => {
+          s.tagPageFolder = v.trim()
+          validate()
+          await this.save()
+        }),
+      )
+    validate()
+    new Setting(el)
+      .setName('Create missing tag pages')
+      .setDesc('Lists the pages it would create. Nothing is written until you confirm.')
+      .addButton((b) => b.setButtonText('Create missing tag pages').onClick(() => void createTagPages(p.host())))
   }
 
   private renderReport(el: HTMLElement) {

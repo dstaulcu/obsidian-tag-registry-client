@@ -1,4 +1,4 @@
-import { DEFAULT_DEST_FOLDER } from './brand'
+import { DEFAULT_DEST_FOLDER, DEFAULT_TAG_PAGE_FOLDER } from './brand'
 import type { ManifestTeam } from './core/manifest'
 import type { AuthMethod } from './core/sources'
 
@@ -31,6 +31,8 @@ export interface RegistrySettings {
   /** Teams seen in the last fetched manifest, so the picker works before the next fetch. */
   knownTeams: ManifestTeam[]
   destFolder: string
+  /** Where "Create missing tag pages" writes local tag pages. */
+  tagPageFolder: string
   startupMode: StartupMode
   /** Verbose, leak-safe progress lines in the developer console. */
   debugLogging: boolean
@@ -44,7 +46,7 @@ export function newSource(): SourceSetting {
 }
 
 export function defaultSettings(): RegistrySettings {
-  return { schemaVersion: 1, sources: [newSource()], teams: [], allTeams: false, includeAncestors: true, showExampleTeams: false, knownTeams: [], destFolder: DEFAULT_DEST_FOLDER, startupMode: 'notify', debugLogging: false }
+  return { schemaVersion: 1, sources: [newSource()], teams: [], allTeams: false, includeAncestors: true, showExampleTeams: false, knownTeams: [], destFolder: DEFAULT_DEST_FOLDER, tagPageFolder: DEFAULT_TAG_PAGE_FOLDER, startupMode: 'notify', debugLogging: false }
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
@@ -89,6 +91,7 @@ export function normalizeSettings(raw: unknown): RegistrySettings {
     showExampleTeams: raw.showExampleTeams === true,
     knownTeams: normalizeTeams(raw.knownTeams),
     destFolder: typeof raw.destFolder === 'string' ? raw.destFolder : d.destFolder,
+    tagPageFolder: typeof raw.tagPageFolder === 'string' ? raw.tagPageFolder : d.tagPageFolder,
     startupMode: MODES.includes(raw.startupMode as string) ? (raw.startupMode as StartupMode) : d.startupMode,
     debugLogging: raw.debugLogging === true,
   }
