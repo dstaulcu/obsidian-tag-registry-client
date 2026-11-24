@@ -7,12 +7,14 @@ It is deliberately small and has **no AI, no scheduler, and no dependency on the
 1. **Identify** one or more tag-registry repos (URL, branch/tag, access method).
 2. **Subscribe** to the registry's `core` tags and to any chosen `teams/<team>` tag sets.
 3. **Import** the subscribed tags as one markdown note per tag, on demand or when Obsidian starts.
+4. **Create missing tag pages** for tags used in the vault that no registry defines, after the user confirms (see `tag-pages`).
 
 ## What it does not do
 - Run agents, review tags, propose or apply tag edits to user notes (Tag Review is removed from the product line).
 - Maintain a single "vocabulary note" or bridge into any other plugin.
 - Migrate settings from Scheduled Agents. Users start fresh.
-- Write anything outside the chosen destination folder, except opt-in tag renames (see registry-import).
+- Write anything outside the chosen destination folder, except opt-in tag renames (see registry-import) and confirmed new pages in the tag page folder (see tag-pages).
+- Groom tags with judgment (definitions, backfilling tags onto notes, proposing tags upstream). That is an agent's job; see `tag-grooming`.
 
 ## Principles
 - **Registry is the source of truth**; the vault holds a hash-stamped copy. Local edits are never silently overwritten.

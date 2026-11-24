@@ -12,6 +12,7 @@ src/
     apply.ts              # fetch-all-then-write                      (from glossary/apply.ts)
     stamp.ts              # glossary_hash stamping                    (from glossary/stamp.ts)
     rename.ts             # in-text tag rename                        (from glossary/rename.ts)
+    tagPages.ts           # plan/create local tag pages (R-TP-*)
     diagnostics.ts        # "Report an issue" text
   host/                   # Obsidian/Node adapters
     controller.ts         # orchestration (importRegistry)            (from glossary/controller.ts)
@@ -21,13 +22,14 @@ src/
   ui/
     SettingTab.ts         # sources, team picker, destination, startup mode
     PreviewModal.ts       # (from ui/GlossaryPreviewModal.ts)
+    TagPageModal.ts       # confirm list for "Create missing tag pages"
 tests/                    # mirrors core/, plus settings + diagnostics
 .kiro/{steering,specs}/
 ```
 
 ## Invariants
 1. Nothing is written to the vault until the user confirms the preview, except an explicitly enabled auto-import that touches only non-conflicting notes (see registry-import R-IMP-9).
-2. Every note path from a manifest passes `isSafeNotePath` before use; hidden folders are never written; destination must pass `destError`.
+2. Every note path from a manifest passes `isSafeNotePath` before use; hidden folders are never written; destination must pass `destError`; the tag page folder must pass `tagPageFolderError`.
 3. Downloaded note text must match its manifest sha256 before it is stamped or written.
 4. All sources are fetched and validated before any write; one failure aborts the whole run.
 5. Diagnostics never include tokens, repo URLs with credentials, note content, or vault paths.

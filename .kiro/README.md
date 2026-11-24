@@ -10,11 +10,13 @@ Tag Review is **removed**, and nothing is migrated. No code exists yet; these sp
 | [`registry-subscription`](specs/registry-subscription/requirements.md) | Identify registries, access methods, tokens, team discovery and selection, destination, startup mode |
 | [`registry-import`](specs/registry-import/requirements.md) | Manifest v2 validation, plan/preview/apply, conflicts, hash stamps, deprecated-tag rename, startup notify/auto |
 | [`plugin-foundation`](specs/plugin-foundation/requirements.md) | Identity, build/test/CI/release, diagnostics, docs |
+| [`tag-pages`](specs/tag-pages/requirements.md) | Create missing tag pages (alias `#tag`) for local tags, in a folder the plugin controls |
+| [`tag-grooming`](specs/tag-grooming/design.md) | Design only: normalize, page, backfill and promote tags; what lives in the plugin vs an agent vs the registry |
 | [`scheduler-extraction`](specs/scheduler-extraction/requirements.md) | Removing Tag Review and the importer from `obsidian-scheduled-agents` |
 | [steering](steering/) | Product intent, tech stack, structure and invariants |
 
 Suggested order: plugin-foundation 1–4 → registry-subscription → registry-import → plugin-foundation 5–8 → scheduler-extraction.
-Each spec has `requirements.md` (EARS), `design.md`, `tasks.md`; requirement ids (`R-SUB-n`, `R-IMP-n`, `R-FND-n`, `R-EXT-n`) are referenced from tasks.
+Each spec has `requirements.md` (EARS), `design.md`, `tasks.md`; requirement ids (`R-SUB-n`, `R-IMP-n`, `R-FND-n`, `R-EXT-n`, `R-TP-n`) are referenced from tasks.
 
 ## The registry contract (manifest v2)
 The plugin and the tag-registry repo meet at this interface. Anything that changes it needs a version bump on both sides.

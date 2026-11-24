@@ -1,5 +1,5 @@
 import { Plugin } from 'obsidian'
-import { Host, importRegistry } from './host/controller'
+import { createTagPages, Host, importRegistry } from './host/controller'
 import { makeLogger } from './host/logger'
 import { normalizeSettings, RegistrySettings } from './settings'
 import { RegistrySettingTab } from './ui/SettingTab'
@@ -15,6 +15,11 @@ export default class TagRegistryPlugin extends Plugin {
       id: 'import-tags',
       name: 'Import / update tags',
       callback: () => void importRegistry(this.host(), { mode: 'interactive' }),
+    })
+    this.addCommand({
+      id: 'create-tag-pages',
+      name: 'Create missing tag pages',
+      callback: () => void createTagPages(this.host()),
     })
     this.app.workspace.onLayoutReady(() => void this.startup())
   }

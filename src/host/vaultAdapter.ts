@@ -1,5 +1,6 @@
-import { App, normalizePath, TFile } from 'obsidian'
+import { App, getAllTags, normalizePath, parseFrontMatterAliases, TFile } from 'obsidian'
 import { ImportVault } from '../core/importer'
+import type { TagPageScan } from '../core/tagPages'
 import { renameTagInText } from '../core/rename'
 import { readStamp } from '../core/stamp'
 
@@ -51,4 +52,22 @@ export async function renameUsages(app: App, dest: string, from: string, to: str
     n++
   }
   return n
+}
+
+/**
+ * Tags used by notes outside the `exclude` folders (note counts, lowercased), and every `#tag` alias in the vault,
+ * which marks its note as that tag's page (R-TP-2). Reads Obsidian's metadata cache only; nothing is written.
+ */
+export async function scanTags(app: App, exclude: string[]): Promise<TagPageScan> {
+  const prefixes = exclude.filter(Boolean).map((d) => normalizePath(d).toLowerCase() + '/')
+  const used: Record<string, number> = {}
+  const paged: string[] = []
+  for (const f of app.vault.getMarkdownFiles()) {
+    const cache = app.metadataCache.getFileCache(f)
+    if (!cache) continue
+    for (const a of parseFrontMatterAliases(cache.frontmatter) ?? []) if (typeof a === 'string' && a.startsWith('#')) paged.push(a)
+    if (prefixes.some((p) => f.path.toLowerCase().startsWith(p))) continue
+    for (const t of new Set((getAllTags(cache) ?? []).map((x) => x.toLowerCase()))) used[t] = (used[t] ?? 0) + 1
+  }
+  return { used, paged }
 }
